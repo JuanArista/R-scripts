@@ -1,0 +1,72 @@
+# SCRIPT for reading nc files from ERA5-Land hourly data from 1981 to present and export them to CSV format.
+#variable': [ '2m_temperature', 'surface_net_solar_radiation', 'total_evaporation', 'total_precipitation'  ]
+
+
+require(ncdf4) 
+library(stringr) 
+require(dplyr)
+
+
+
+
+ruta_destino<-c('C:/Path_end')  #update this line
+rutafuente<-c('C:/Path_source') #update this line
+
+archivosfuente<-list.files(path =rutafuente,pattern = "\\.nc" )
+
+for (j in 1:length(archivosfuente))
+{
+  nc_file<-paste(rutafuente[1],archivosfuente[j], sep = ""  )
+  nc_data = nc_open(nc_file)
+  
+  lat_variable = 'latitude'
+  lon_variable = 'longitude'
+  time_variable ='time'
+  nc_variable = 't2m'
+  nc_evap='e'
+  nc_radiation='ssr'
+  nc_precip='tp'
+  
+  variable = ncvar_get(nc_data,nc_variable)-273.15 #extracción valores variable
+  evaporacion=ncvar_get(nc_data,nc_evap)*100 #variable evaporacion * 100 para pasar a mm
+  radiacion=ncvar_get(nc_data,nc_radiation)#variable  radiacion
+  precipitacion=ncvar_get(nc_data,nc_precip)*100 #variable precipitacion para pasara a mm
+  
+  #dimension(precipitacion)
+  latitud=ncvar_get(nc_data,lat_variable)
+  longitud=ncvar_get(nc_data,lon_variable)
+  ElTiempo=ncvar_get(nc_data,time_variable)
+  length(ElTiempo)
+  
+  
+  times = ncvar_get(nc_data,time_variable)
+  Fechas<-as.POSIXct(times*3600 , origin="1900-01-01 00:00:00.0")
+  
+  
+  
+  dato <-data.frame()
+  registro <-data.frame()
+  
+  for (i in 1:length(ElTiempo)){
+    
+    VectorFecha=str_split(Fechas[i],"\\s|-",simplify=TRUE) #separa por espacio (s) y por guion medio (-) la barra vertical separa los dos patrones es como decir O
+    Anio<-VectorFecha[1]
+    Mes<-VectorFecha[2]
+    Dia<-VectorFecha[3]
+    HoraMins<-str_split(VectorFecha[4],":",simplify=TRUE)[1]
+    Hora=HoraMins[1]
+    
+    registro<-data.frame(Latitud=latitud, Longitud=longitud,fecha=c(Fechas[i]),
+                         anio=Anio,mes=Mes,dia=Dia,hora=Hora,Tprom=variable[i],Evaporacion= evaporacion[i],
+                         Radiacion=radiacion[i], Precipitacion=precipitacion[i])
+    
+    dato<-  rbind(dato,registro)
+    
+  }
+  
+  NombreArchivo<-split(archivosfuente[j],".")# toma el nombre del arrelgo sin la extension .nc
+  ArchivoFin<-paste(ruta_destino,NombreArchivo[1],".csv", sep="")
+  write.csv(dato,file=ArchivoFin, append = FALSE,quote = TRUE,sep = ",")
+  
+  
+}  #for (i in 1:length(archivos))    
