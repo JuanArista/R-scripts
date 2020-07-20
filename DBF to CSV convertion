@@ -1,0 +1,19 @@
+library('foreign')
+
+RutaFuente<-"My_path"
+
+
+setwd(RutaFuente)
+
+# Reading directory
+ListaArchivos<-list.files(path = RutaFuente ,pattern = "\\.dbf")
+
+# for each file in directory
+for (i in 1:length(ListaArchivos))
+{  
+  
+   tabla<-read.dbf(ListaArchivos[i],as.is = FALSE)
+   NombreArchivo=substring(ListaArchivos[i],1,nchar(ListaArchivos[i])-4) #quita la extension
+   Nombre<-paste(RutaFuente,"/",NombreArchivo,".csv",sep = "")  #agrega extension CSV
+   write.csv(tabla,file=Nombre, quote = TRUE, sep=",", eol = "\n", row.names = TRUE, fileEncoding = "UTF8")
+}
