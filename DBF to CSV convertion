@@ -1,19 +1,27 @@
+# This script read Dbase files and convert to CSV format each
+# writed by Juan Arista
+
 library('foreign')
 
-RutaFuente<-"My_path"
+
+SourcePath<-"My_path"
 
 
-setwd(RutaFuente)
+setwd(SourcePath)
 
 # Reading directory
-ListaArchivos<-list.files(path = RutaFuente ,pattern = "\\.dbf")
+
+Files<-list.files(path = SourcePath ,pattern = "\\.dbf")
 
 # for each file in directory
-for (i in 1:length(ListaArchivos))
+for (i in 1:length(Files))
 {  
   
-   tabla<-read.dbf(ListaArchivos[i],as.is = FALSE)
-   NombreArchivo=substring(ListaArchivos[i],1,nchar(ListaArchivos[i])-4) #quita la extension
-   Nombre<-paste(RutaFuente,"/",NombreArchivo,".csv",sep = "")  #agrega extension CSV
-   write.csv(tabla,file=Nombre, quote = TRUE, sep=",", eol = "\n", row.names = TRUE, fileEncoding = "UTF8")
+   
+   table<-read.dbf(Files[i],as.is = FALSE)
+   
+   FileName=substring(Files[i],1,nchar(Files[i])-4) #takes file name less extension
+   
+   CSV_FileName<-paste(SourcePath,"/",FileName,".csv",sep = "")  #add  CSV extension
+   write.csv(table,file=CSV_FileName, quote = TRUE, sep=",", eol = "\n", row.names = TRUE, fileEncoding = "UTF8")
 }
