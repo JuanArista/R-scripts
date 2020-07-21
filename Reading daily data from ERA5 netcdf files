@@ -68,7 +68,7 @@ for (j in 1:length(SourceFiles))# reading all files in the Directory of SourceFi
     
     
     DailyRecord<-data.frame(Latitude=latitude, Longitude=longitude,date=c(DatesFormated[i]),
-                            year=Year,month=Month,day=Day,hour=Hour,Tprom=temperature[i],Evaporation= evaporation[i],
+                            year=Year,month=Month,day=Day,hour=Hour,Temperature=temperature[i],Evaporation= evaporation[i],
                             Radiation=radiation[i], Rainfall=rainfall[i])
     
     MyDailyDataContainer<-  rbind(MyDailyDataContainer,DailyRecord) #Add daily data to the container
