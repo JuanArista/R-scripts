@@ -1,5 +1,6 @@
 
 
+
 # SCRIPT for reading nc files from ERA5-Land hourly data from 1981 to present and export them to CSV format.
 #variables': [ '2m_temperature', 'surface_net_solar_radiation', 'total_evaporation', 'total_precipitation'  ]
 
