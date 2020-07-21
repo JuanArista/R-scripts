@@ -1,72 +1,83 @@
+
+
 # SCRIPT for reading nc files from ERA5-Land hourly data from 1981 to present and export them to CSV format.
-#variable': [ '2m_temperature', 'surface_net_solar_radiation', 'total_evaporation', 'total_precipitation'  ]
+#variables': [ '2m_temperature', 'surface_net_solar_radiation', 'total_evaporation', 'total_precipitation'  ]
 
 
 require(ncdf4) 
-library(stringr) 
+require(stringr) 
 require(dplyr)
 
 
 
+SourceFilesPath<-c('C:/Python27/test/') #update this line
+FilesEndPath<-c('C:/Python27/test/csv/')  #update this line
 
-ruta_destino<-c('C:/Path_end')  #update this line
-rutafuente<-c('C:/Path_source') #update this line
 
-archivosfuente<-list.files(path =rutafuente,pattern = "\\.nc" )
 
-for (j in 1:length(archivosfuente))
+SourceFiles<-list.files(path =SourceFilesPath,pattern = "\\.nc" )  # list file with extension .nc only
+
+for (j in 1:length(SourceFiles))# reading all files in the Directory of SourceFiles
 {
-  nc_file<-paste(rutafuente[1],archivosfuente[j], sep = ""  )
+  nc_file<-paste(SourceFilesPath[1],SourceFiles[j], sep = ""  )
   nc_data = nc_open(nc_file)
+  # the query in ERA5 for this script took variables below:
+  #variables': [ '2m_temperature', 'surface_net_solar_radiation', 'total_evaporation', 'total_precipitation'  ]
+  # if you want more variables you should add them here
   
-  lat_variable = 'latitude'
-  lon_variable = 'longitude'
+  lat_variable = 'latitude'  
+  lon_variable = 'longitude'  
   time_variable ='time'
-  nc_variable = 't2m'
-  nc_evap='e'
-  nc_radiation='ssr'
-  nc_precip='tp'
   
-  variable = ncvar_get(nc_data,nc_variable)-273.15 #extracción valores variable
-  evaporacion=ncvar_get(nc_data,nc_evap)*100 #variable evaporacion * 100 para pasar a mm
-  radiacion=ncvar_get(nc_data,nc_radiation)#variable  radiacion
-  precipitacion=ncvar_get(nc_data,nc_precip)*100 #variable precipitacion para pasara a mm
-  
-  #dimension(precipitacion)
-  latitud=ncvar_get(nc_data,lat_variable)
-  longitud=ncvar_get(nc_data,lon_variable)
-  ElTiempo=ncvar_get(nc_data,time_variable)
-  length(ElTiempo)
+  nc_temp = 't2m'   # Variable  2m_temperature
+  nc_evap='e'       # Variable total_evaporation
+  nc_radiation='ssr' # Variable  surface_net_solar_radiation
+  nc_precip='tp'     # Variable total_precipitation
   
   
+  temperature= ncvar_get(nc_data,nc_temp)-273.15 # subtract 273.15 to convert from Kelvin degree to centigrade degree
+  evaporation=ncvar_get(nc_data,nc_evap)*100     # evaporation variable multiply by 100 to converto to mm
+  radiation=ncvar_get(nc_data,nc_radiation)      #variable  radiation
+  rainfall=ncvar_get(nc_data,nc_precip)*100      #variable rainfall multiply by 100 to convert to mm
+  
+  
+  
+  latitude=ncvar_get(nc_data,lat_variable)
+  longitude=ncvar_get(nc_data,lon_variable)
+  
+  TheDate=ncvar_get(nc_data,time_variable)
   times = ncvar_get(nc_data,time_variable)
-  Fechas<-as.POSIXct(times*3600 , origin="1900-01-01 00:00:00.0")
+  DatesFormated<-as.POSIXct(times*3600 , origin="1900-01-01 00:00:00.0")
   
   
+  MyDailyDataContainer  <-data.frame()
   
-  dato <-data.frame()
-  registro <-data.frame()
+  DailyRecord<-data.frame()
   
-  for (i in 1:length(ElTiempo)){
+  for (i in 1:length(TheDate)){ # reading daily data for each file
     
-    VectorFecha=str_split(Fechas[i],"\\s|-",simplify=TRUE) #separa por espacio (s) y por guion medio (-) la barra vertical separa los dos patrones es como decir O
-    Anio<-VectorFecha[1]
-    Mes<-VectorFecha[2]
-    Dia<-VectorFecha[3]
-    HoraMins<-str_split(VectorFecha[4],":",simplify=TRUE)[1]
-    Hora=HoraMins[1]
     
-    registro<-data.frame(Latitud=latitud, Longitud=longitud,fecha=c(Fechas[i]),
-                         anio=Anio,mes=Mes,dia=Dia,hora=Hora,Tprom=variable[i],Evaporacion= evaporacion[i],
-                         Radiacion=radiacion[i], Precipitacion=precipitacion[i])
+    DateString=str_split(DatesFormated[i],"\\s|-",simplify=TRUE) # Separates date in Year, Month, Day and Hour
+    Year<-DateString[1]
+    Month<-DateString[2]
+    Day<-DateString[3]
     
-    dato<-  rbind(dato,registro)
+    HourString<-str_split(DateString[4],":",simplify=TRUE)[1]  #Separates the hour data in hours and minutes
+    Hour=HourString[1]  # takes hours only
+    
+    
+    DailyRecord<-data.frame(Latitude=latitude, Longitude=longitude,date=c(DatesFormated[i]),
+                            year=Year,month=Month,day=Day,hour=Hour,Tprom=temperature[i],Evaporation= evaporation[i],
+                            Radiation=radiation[i], Rainfall=rainfall[i])
+    
+    MyDailyDataContainer<-  rbind(MyDailyDataContainer,DailyRecord) #Add daily data to the container
     
   }
   
-  NombreArchivo<-split(archivosfuente[j],".")# toma el nombre del arrelgo sin la extension .nc
-  ArchivoFin<-paste(ruta_destino,NombreArchivo[1],".csv", sep="")
-  write.csv(dato,file=ArchivoFin, append = FALSE,quote = TRUE,sep = ",")
   
+  FileName<-split(SourceFiles[j],".")# takes filename (*.nc) less extension name(.nc)
+  EndFile<-paste(FilesEndPath,FileName[1],".csv", sep="")
+  # Record data in CSV format
+  write.csv(MyDailyDataContainer,file=EndFile, append = FALSE,quote = TRUE,sep = ",")
   
-}  #for (i in 1:length(archivos))    
+}
