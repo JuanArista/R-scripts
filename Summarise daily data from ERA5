@@ -1,0 +1,87 @@
+
+# SCRIPT for reading nc files from ERA5-Land hourly data from 1981 to present and export them to CSV format.
+#variables': [ '2m_temperature',  'total_evaporation', 'total_precipitation'  ]
+# the script calculates summarise  daily data for Mean, Maximum and Minimum Temperature, Total rain fall and total evaporation
+# script writed by Juan Arista
+
+
+require(ncdf4) 
+require(stringr) 
+require(dplyr)
+
+
+
+
+SourceFilesPath<-c('C:/Python27/test/') #update this line
+FilesEndPath<-c('C:/Python27/test/csv/')  #update this line
+
+
+SourceFiles<-list.files(path =SourceFilesPath,pattern = "\\.nc" )  # list file with extension .nc only
+
+for (j in 1:length(SourceFiles))# reading all files in the Directory of SourceFiles
+{
+  nc_file<-paste(SourceFilesPath[1],SourceFiles[j], sep = ""  )
+  nc_data = nc_open(nc_file)
+  # the query in ERA5 for this script took variables below:
+  #variables': [ '2m_temperature','total_evaporation', 'total_precipitation'  ]
+  # if you want more variables you should add them here
+  
+  lat_variable = 'latitude'  
+  lon_variable = 'longitude'  
+  time_variable ='time'
+  nc_temp = 't2m'   # Variable  2m_temperature
+  nc_evap='e'       # Variable total_evaporation
+  nc_precip='tp'     # Variable total_precipitation
+  
+  
+  temperature= ncvar_get(nc_data,nc_temp)-273.15 # subtract 273.15 to convert from Kelvin degree to centigrade degree
+  evaporation=ncvar_get(nc_data,nc_evap)*100     # evaporation variable multiply by 100 to converto to mm
+  
+  rainfall=ncvar_get(nc_data,nc_precip)*100      #variable rainfall multiply by 100 to convert to mm
+  
+  
+  
+  latitude=ncvar_get(nc_data,lat_variable)
+  longitude=ncvar_get(nc_data,lon_variable)
+  
+  TheDate=ncvar_get(nc_data,time_variable)
+  times = ncvar_get(nc_data,time_variable)
+  DatesFormated<-as.POSIXct(times*3600 , origin="1900-01-01 00:00:00.0")
+  
+  
+  MyDailyDataContainer  <-data.frame()
+  
+  DailyRecord<-data.frame()
+  
+  for (i in 1:length(TheDate)){ # reading daily data for each file
+    
+    
+    DateString=str_split(DatesFormated[i],"\\s|-",simplify=TRUE) # Separates date in Year, Month, Day and Hour
+    Year<-DateString[1]
+    Month<-DateString[2]
+    Day<-DateString[3]
+    
+    HourString<-str_split(DateString[4],":",simplify=TRUE)[1]  #Separates the hour data in hours and minutes
+    Hour=HourString[1]  # takes hours only
+    
+    
+    DailyRecord<-data.frame(Latitude=latitude, Longitude=longitude,date=c(DatesFormated[i]),
+                            year=Year,month=Month,day=Day,hour=Hour,Temperature=temperature[i],Evaporation= evaporation[i],
+                            Rainfall=rainfall[i])
+    
+    MyDailyDataContainer<-  rbind(MyDailyDataContainer,DailyRecord) #Add daily data to the container
+    
+  }
+  
+  
+  FileName<-split(SourceFiles[j],".")# takes filename (*.nc) less extension name(.nc)
+  EndFile<-paste(FilesEndPath,FileName[1],".csv", sep="")
+ 
+  MyDailyDataContainer$hour[is.na(MyDailyDataContainer$hour)]<-"24"  # ERA5 put "NA" for 24 hour, it is changed to 24 in order to do daily averages
+  
+  Averages<-MyDailyDataContainer%>%group_by(year,month,day)%>%summarise(mean(Temperature),max(Temperature),min(Temperature),sum(Rainfall),sum(Evaporation))
+  
+  # Record data in CSV format
+  write.csv(Averages,file=EndFile, append = FALSE,quote = TRUE,sep = ",")
+  
+}
