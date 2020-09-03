@@ -1,0 +1,57 @@
+# Create C:/ClimateData/ directory then download and save from current repository these csv files: 
+#  Aguafria.csv, Batan.csv, Ceneb.csv, Tlaltizapan.csv, Toluca.csv
+
+WorkPlace<-('C:/ClimateData/')
+setwd(WorkPlace)
+Stations<-c('Aguafria.csv','Batan.csv','Ceneb.csv','Tlaltizapan.csv','Toluca.csv')
+StationSelected<-Stations[2]   # Select Station with index
+
+DateField<-'Fecha'
+
+MeanTemField<-'Tprom'
+################
+# Update these data
+BaseTemp<-10
+ThresholdTemp<-30
+StartDate<-as.Date("2016-11-23")
+StageDate<-as.Date("2017-02-07")
+
+###################
+
+
+ClimateData<-read.csv(StationSelected,header = TRUE, sep=",")
+
+GDD<-0
+
+Container<-data.frame()
+
+
+
+for(i in 1:nrow(ClimateData))
+{
+  CurrentDate<-as.Date(ClimateData[i,DateField])
+ print(paste("GDD:",GDD,"MeanTemp:",ClimateData[i,MeanTemField],sep=" "))
+  if(CurrentDate>=StartDate  & CurrentDate<=StageDate )
+   {
+    CurrentMeanTemp<-ClimateData[i,MeanTemField]
+    
+    # consult this article for more information about how to calculate Growing Degree Days (GDD)
+    # Ojeda-Bustamante, W., Sifuentes-Ibarra, E., & Unland-Weiss, H. (2006). Integral programming for corn irrigation in northern Sinaloa, Mexico. Agrociencia.
+    
+      ifelse (CurrentMeanTemp>ThresholdTemp,GDD<-GDD+(ThresholdTemp-BaseTemp),
+          ifelse(CurrentMeanTemp>=BaseTemp,GDD<-GDD+(CurrentMeanTemp-BaseTemp), GDD<-GDD) 
+              )
+    
+      RecordDay<-data.frame(Date=CurrentDate,GDD_Acum=GDD, stringsAsFactors = FALSE)
+      Container<-rbind(Container,RecordDay)
+    }
+     
+ if (CurrentDate>StageDate){break;     }
+
+}
+
+
+
+
+write.csv(Container,file="GDD_Accumulated.csv",eol = "\n",na="NA",quote = TRUE)
+
